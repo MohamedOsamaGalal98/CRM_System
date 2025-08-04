@@ -23,8 +23,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Create permissions - ONLY the ones that exist in the code
         $permissions = [
-            // Dashboard
-            'view_dashboard',
             
             // User Management
             'view_any_users',
@@ -71,8 +69,10 @@ class RolesAndPermissionsSeeder extends Seeder
         $roles = [
             'Super Admin',
             'Admin',
-            'Manager',
-            'User'
+            'Sales Manager',
+            'Sales',
+            'Dataentry Manager',
+            'Dataentry',
         ];
 
         foreach ($roles as $role) {
@@ -86,8 +86,6 @@ class RolesAndPermissionsSeeder extends Seeder
         // Assign permissions to Admin role (all except force delete)
         $adminRole = Role::findByName('Admin');
         $adminRole->givePermissionTo([
-            // Dashboard
-            'view_dashboard',
             
             // User Management (all except force delete)
             'view_any_users', 'view_users', 'create_users', 'update_users', 
@@ -105,27 +103,44 @@ class RolesAndPermissionsSeeder extends Seeder
             'restore_permissions', 'bulk_restore_permissions', 'view_deleted_permissions',
         ]);
 
-        // Assign permissions to Manager (view + create + update only)
-        $managerRole = Role::findByName('Manager');
-        $managerRole->givePermissionTo([
-            // Dashboard
-            'view_dashboard',
+        // Assign permissions to Sales Manager
+        $salesManagerRole = Role::findByName('Sales Manager');
+        $salesManagerRole->givePermissionTo([
             
             // User Management (basic operations)
             'view_any_users', 'view_users', 'create_users', 'update_users',
             
             // Role Management (view only)
-            'view_any_roles', 'view_roles', 'create_roles', 'update_roles',
+            'view_any_roles', 'view_roles',
             
             // Permission Management (view only)
-            'view_any_permissions', 'view_permissions', 'create_permissions', 'update_permissions',
+            'view_any_permissions', 'view_permissions',
         ]);
 
-        // Assign permissions to User (view only)
-        $userRole = Role::findByName('User');
-        $userRole->givePermissionTo([
-            // Dashboard
-            'view_dashboard',
+        // Assign permissions to Sales (view only)
+        $salesRole = Role::findByName('Sales');
+        $salesRole->givePermissionTo([
+            
+            // Basic view permissions
+            'view_any_users', 'view_users',
+        ]);
+
+        // Assign permissions to Dataentry Manager
+        $dataentryManagerRole = Role::findByName('Dataentry Manager');
+        $dataentryManagerRole->givePermissionTo([
+            // User Management (basic operations)
+            'view_any_users', 'view_users', 'create_users', 'update_users',
+            
+            // Role Management (view only)
+            'view_any_roles', 'view_roles',
+            
+            // Permission Management (view only)
+            'view_any_permissions', 'view_permissions',
+        ]);
+
+        // Assign permissions to Dataentry (view only)
+        $dataentryRole = Role::findByName('Dataentry');
+        $dataentryRole->givePermissionTo([
             
             // Basic view permissions
             'view_any_users', 'view_users',

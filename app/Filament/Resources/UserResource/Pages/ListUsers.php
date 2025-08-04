@@ -15,6 +15,11 @@ use App\Models\Role;
 use Filament\Forms;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Gate;
+use App\Filament\Exports\UserExport;
+use App\Filament\Exports\UserTemplateExport;
+use App\Filament\Imports\UserImport;
+use Maatwebsite\Excel\Facades\Excel;
+use Filament\Notifications\Notification;
 
 class ListUsers extends ListRecords
 {
@@ -24,6 +29,144 @@ class ListUsers extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+            
+            Actions\Action::make('export')
+                ->label('📥 Export Excel')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('success')
+                ->action(function () {
+                    // Get all users with applied filters
+                    return Excel::download(
+                        new UserExport(), 
+                        'users-' . now()->format('Y-m-d-H-i-s') . '.xlsx'
+                    );
+                }),
+                
+            Actions\Action::make('download_template')
+                ->label('📋 Download Template')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('info')
+                ->action(function () {
+                    return Excel::download(
+                        new UserTemplateExport(), 
+                        'users-import-template.xlsx'
+                    );
+                }),
+                
+            Actions\Action::make('import')
+                ->label('📤 Import Excel')
+                ->icon('heroicon-o-arrow-up-tray')
+                ->color('warning')
+                ->form([
+                    Forms\Components\FileUpload::make('file')
+                        ->label('Select Excel File')
+                        ->acceptedFileTypes([
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            'application/vnd.ms-excel',
+                            'text/csv'
+                        ])
+                        ->required()
+                        ->directory('imports')
+                        ->visibility('private')
+                        ->preserveFilenames()
+                        ->helperText('Upload Excel file (.xlsx, .xls) or CSV file with user data'),
+                    
+                    Forms\Components\Toggle::make('update_existing')
+                        ->label('Update Existing Users')
+                        ->helperText('Enable this to update existing users instead of skipping them')
+                        ->default(false),
+                ])
+                ->action(function (array $data) {
+                    try {
+                        // Handle the uploaded file using Laravel's UploadedFile
+                        $uploadedFile = request()->file('mountedActionData.0.file');
+                        
+                        if (!$uploadedFile) {
+                            // Alternative method for Filament
+                            $fileName = $data['file'];
+                            
+                            // Try different storage paths
+                            $possiblePaths = [
+                                storage_path('app/livewire-tmp/' . $fileName),
+                                storage_path('app/' . $fileName),
+                                storage_path('app/imports/' . $fileName),
+                                storage_path('app/public/' . $fileName),
+                            ];
+                            
+                            $actualFilePath = null;
+                            foreach ($possiblePaths as $path) {
+                                if (file_exists($path)) {
+                                    $actualFilePath = $path;
+                                    break;
+                                }
+                            }
+                            
+                            if (!$actualFilePath) {
+                                throw new \Exception('File not found. Please try uploading again. Debug info: ' . $fileName);
+                            }
+                        } else {
+                            $actualFilePath = $uploadedFile->getPathname();
+                        }
+                        
+                        $import = new UserImport($data['update_existing'] ?? false);
+                        Excel::import($import, $actualFilePath);
+                        
+                        $failures = $import->failures();
+                        $errors = $import->errors();
+                        
+                        if (count($failures) > 0 || count($errors) > 0) {
+                            $errorMessage = 'Import completed with some issues:<br>';
+                            $skippedCount = 0;
+                            $errorCount = 0;
+                            
+                            foreach ($failures as $failure) {
+                                $errorText = implode(', ', $failure->errors());
+                                if (strpos($errorText, 'email has already been taken') !== false) {
+                                    $skippedCount++;
+                                    if (!($data['update_existing'] ?? false)) {
+                                        $errorMessage .= "Row {$failure->row()}: Email already exists (user skipped)<br>";
+                                    }
+                                } else {
+                                    $errorCount++;
+                                    $errorMessage .= "Row {$failure->row()}: {$errorText}<br>";
+                                }
+                            }
+                            
+                            $title = 'Import Completed';
+                            if ($skippedCount > 0 && $errorCount == 0) {
+                                $title .= ' with Duplicates';
+                                $errorMessage = "Successfully processed import with {$skippedCount} duplicate email(s) " . 
+                                              (($data['update_existing'] ?? false) ? 'updated' : 'skipped') . ".<br>" . $errorMessage;
+                            } else {
+                                $title .= ' with Warnings';
+                            }
+                            
+                            Notification::make()
+                                ->title($title)
+                                ->body($errorMessage)
+                                ->warning()
+                                ->persistent()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Import Successful! ✅')
+                                ->body("Successfully imported users from Excel file")
+                                ->success()
+                                ->send();
+                        }
+                        
+                    } catch (\Exception $e) {
+                        Notification::make()
+                            ->title('Import Failed ❌')
+                            ->body('Error: ' . $e->getMessage())
+                            ->danger()
+                            ->persistent()
+                            ->send();
+                    }
+                })
+                ->modalHeading('Import Users from Excel')
+                ->modalDescription('Upload an Excel file with user data. Enable "Update Existing Users" to update users with duplicate emails instead of skipping them.')
+                ->modalSubmitActionLabel('Import Users')
         ];
     }
 

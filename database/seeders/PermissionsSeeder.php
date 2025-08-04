@@ -34,8 +34,6 @@ class PermissionsSeeder extends Seeder
             'bulk_delete_users',
             'bulk_restore_users',
             'assign_roles_users',
-            'export_users',
-            'import_users',
         ];
 
         // إنشاء صلاحيات شاملة للأدوار
@@ -51,8 +49,6 @@ class PermissionsSeeder extends Seeder
             'bulk_delete_roles',
             'bulk_restore_roles',
             'assign_permissions_roles',
-            'export_roles',
-            'import_roles',
         ];
 
         // إنشاء صلاحيات شاملة للصلاحيات
@@ -68,30 +64,13 @@ class PermissionsSeeder extends Seeder
             'bulk_delete_permissions',
             'bulk_restore_permissions',
             'assign_roles_permissions',
-            'export_permissions',
-            'import_permissions',
-        ];
-
-        // إنشاء صلاحيات إدارية عامة
-        $systemPermissions = [
-            'view_dashboard',
-            'view_system_settings',
-            'manage_system_settings',
-            'view_logs',
-            'clear_cache',
-            'backup_system',
-            'restore_system',
-            'impersonate_users',
-            'view_analytics',
-            'export_reports',
-        ];
+        ];   
 
         // دمج جميع الصلاحيات
         $allPermissions = array_merge(
             $userPermissions,
             $rolePermissions, 
             $permissionPermissions,
-            $systemPermissions
         );
 
         // إنشاء الصلاحيات في قاعدة البيانات
