@@ -94,9 +94,8 @@ class ListRoles extends ListRecords
                     ->offColor('danger')
                     ->onIcon('heroicon-s-check-circle')
                     ->offIcon('heroicon-s-x-circle')
-                    ->disabled(fn ($record) => $record->trashed()) // منع تفعيل السجلات المحذوفة
+                    ->disabled(fn ($record) => $record->trashed())
                     ->afterStateUpdated(function ($record, $state) {
-                        // التحقق من أن السجل غير محذوف
                         if ($record->trashed()) {
                             \Filament\Notifications\Notification::make()
                                 ->title('Cannot Activate Deleted Role')
@@ -106,7 +105,6 @@ class ListRoles extends ListRecords
                             return false;
                         }
                         
-                        // إرسال إشعار بالتحديث
                         \Filament\Notifications\Notification::make()
                             ->title($state ? 'Role Activated' : 'Role Deactivated')
                             ->body("Role '{$record->name}' has been " . ($state ? 'activated' : 'deactivated'))
@@ -170,9 +168,14 @@ class ListRoles extends ListRecords
 
     public function getEloquentQuery(): Builder
     {
-        return Role::query()
-            ->with(['permissions', 'users']) // تحميل العلاقات مسبقاً
-            ->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class)
+        $query = Role::query()
+            ->with(['permissions', 'users'])
             ->withoutGlobalScope(\App\Models\ActiveScope::class);
+            
+        if (Gate::allows('view_deleted_roles')) {
+            $query->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
+        }
+        
+        return $query;
     }
 }

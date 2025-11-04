@@ -18,9 +18,11 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             AdminUserSeeder::class,
             AssignSuperAdminSeeder::class,
+            StatusSeeder::class,
+            LabelSeeder::class,
+            CustomerLabelSeeder::class,
+            UpdateExistingDataSeeder::class,
         ]);
-
-        // User::factory(10)->create();
 
         User::factory()->create([
             'name' => 'Test User',

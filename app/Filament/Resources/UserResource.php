@@ -67,7 +67,7 @@ class UserResource extends Resource
 
     public static function canForceDeleteAny(): bool
     {
-        return Gate::allows('bulk_delete_users');
+        return Gate::allows('force_delete_users');
     }
 
     public static function canRestore($record): bool
@@ -82,7 +82,6 @@ class UserResource extends Resource
 
     public static function form(Form $form): Form
     {
-        // بناء التبويبات ديناميكياً حسب نوع الصفحة
         $tabs = [];
         $tabs[] = Tabs\Tab::make('User Info')
             ->icon('heroicon-o-user')
@@ -224,11 +223,9 @@ class UserResource extends Resource
                     ->onIcon('heroicon-s-check-circle')
                     ->offIcon('heroicon-s-x-circle')
                     ->updateStateUsing(function ($record, $state) {
-                        // نحدث الحقل الصحيح
                         $record->email_verified_at = $state ? now() : null;
                         $record->save();
                         
-                        // إرسال notification
                         \Filament\Notifications\Notification::make()
                             ->title($state ? 'Email Verified ✅' : 'Email Unverified ❌')
                             ->body($state ? 'User email has been verified successfully' : 'User email verification has been removed')
@@ -245,7 +242,6 @@ class UserResource extends Resource
                     ->placeholder('❌ Not verified')
                     ->formatStateUsing(function ($state, $record) {
                         if ($state) {
-                            // تحويل إلى التوقيت المحلي وعرضه
                             $localTime = $state->setTimezone('Africa/Cairo');
                             return '✅ ' . $localTime->format('M j, Y - H:i');
                         }
@@ -267,9 +263,9 @@ class UserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->tooltip(fn ($record) => $record->updated_at->setTimezone('Africa/Cairo')->diffForHumans()),
             ])
-            ->filters([
-                Tables\Filters\TrashedFilter::make(),
-                // Filter by user name
+            ->filters(array_merge(
+                static::getTableFilters(),
+                [
                 Tables\Filters\Filter::make('name')
                     ->form([
                         Forms\Components\TextInput::make('name')
@@ -284,7 +280,6 @@ class UserResource extends Resource
                             );
                     }),
 
-                // Filter by email
                 Tables\Filters\Filter::make('email')
                     ->form([
                         Forms\Components\TextInput::make('email')
@@ -300,14 +295,12 @@ class UserResource extends Resource
                             );
                     }),
 
-                // Filter by roles (existing - enhanced)
                 Tables\Filters\SelectFilter::make('roles')
                     ->relationship('roles', 'name')
                     ->multiple()
                     ->preload()
                     ->label('User Roles'),
 
-                // Filter by email verification status (existing - enhanced)
                 Tables\Filters\TernaryFilter::make('email_verified_at')
                     ->label('Email Verified')
                     ->placeholder('All users')
@@ -315,7 +308,6 @@ class UserResource extends Resource
                     ->falseLabel('Unverified users only')
                     ->nullable(),
 
-                // Filter by active status
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active Status')
                     ->placeholder('All users')
@@ -323,7 +315,6 @@ class UserResource extends Resource
                     ->falseLabel('Inactive users only')
                     ->nullable(),
 
-                // Filter by creation date
                 Tables\Filters\Filter::make('created_at')
                     ->form([
                         Forms\Components\DatePicker::make('created_from')
@@ -343,7 +334,6 @@ class UserResource extends Resource
                             );
                     }),
 
-                // Filter by last update date
                 Tables\Filters\Filter::make('updated_at')
                     ->form([
                         Forms\Components\DatePicker::make('updated_from')
@@ -363,7 +353,6 @@ class UserResource extends Resource
                             );
                     }),
 
-                // Filter by users with specific permissions - FIXED
                 Tables\Filters\SelectFilter::make('permissions')
                     ->relationship('permissions', 'name', fn (Builder $query) => $query->whereNull('permissions.deleted_at')->where('permissions.is_active', 1))
                     ->multiple()
@@ -372,7 +361,6 @@ class UserResource extends Resource
                     ->placeholder('Select permissions to filter by')
                     ->searchable(),
 
-                // Quick filters for common scenarios
                 Tables\Filters\Filter::make('admin_users')
                     ->label('Admin Users')
                     ->query(fn (Builder $query): Builder => $query->whereHas('roles', fn ($q) => $q->whereIn('name', ['Super Admin', 'Admin'])))
@@ -392,7 +380,8 @@ class UserResource extends Resource
                     ->label('Users Without Roles')
                     ->query(fn (Builder $query): Builder => $query->doesntHave('roles'))
                     ->toggle(),
-            ])
+                ]
+            ))
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
@@ -479,9 +468,25 @@ class UserResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScope(SoftDeletingScope::class)
+        $query = parent::getEloquentQuery()
             ->withoutGlobalScope(\App\Models\ActiveScope::class);
+            
+        if (Gate::allows('view_deleted_users')) {
+            $query->withoutGlobalScope(SoftDeletingScope::class);
+        }
+        
+        return $query;
+    }
+
+    protected static function getTableFilters(): array
+    {
+        $filters = [];
+        
+        if (Gate::allows('view_deleted_users')) {
+            $filters[] = Tables\Filters\TrashedFilter::make();
+        }
+        
+        return $filters;
     }
 
     public static function getRelations(): array

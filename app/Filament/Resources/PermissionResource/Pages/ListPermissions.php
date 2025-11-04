@@ -38,14 +38,18 @@ class ListPermissions extends ListRecords
             'active' => Tab::make('Active Permissions')
                 ->icon('heroicon-o-check-circle')
                 ->badge(Permission::whereNull('deleted_at')->count())
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('deleted_at')),
+                ->modifyQueryUsing(function (Builder $query) {
+                    return $query->whereNull('deleted_at');
+                }),
         ];
 
         if (Gate::allows('view_deleted_permissions')) {
             $tabs['deleted'] = Tab::make('Deleted Permissions')
                 ->icon('heroicon-o-trash')
                 ->badge(Permission::onlyTrashed()->count())
-                ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed());
+                ->modifyQueryUsing(function (Builder $query) {
+                    return $query->onlyTrashed();
+                });
         }
 
         return $tabs;
@@ -58,8 +62,12 @@ class ListPermissions extends ListRecords
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable()
-                    ->color(fn ($record) => $record->is_active ? 'primary' : 'gray')
-                    ->icon(fn ($record) => $record->is_active ? null : 'heroicon-s-no-symbol'),
+                    ->color(function ($record) {
+                        return $record->is_active ? 'primary' : 'gray';
+                    })
+                    ->icon(function ($record) {
+                        return $record->is_active ? null : 'heroicon-s-no-symbol';
+                    }),
                 Tables\Columns\TextColumn::make('guard_name')
                     ->label('Guard')
                     ->badge()
@@ -96,9 +104,10 @@ class ListPermissions extends ListRecords
                     ->offColor('danger')
                     ->onIcon('heroicon-s-check-circle')
                     ->offIcon('heroicon-s-x-circle')
-                    ->disabled(fn ($record) => $record->trashed()) // منع تفعيل السجلات المحذوفة
+                    ->disabled(function ($record) {
+                        return $record->trashed();
+                    }) 
                     ->afterStateUpdated(function ($record, $state) {
-                        // التحقق من أن السجل غير محذوف
                         if ($record->trashed()) {
                             \Filament\Notifications\Notification::make()
                                 ->title('Cannot Activate Deleted Permission')
@@ -108,7 +117,6 @@ class ListPermissions extends ListRecords
                             return false;
                         }
                         
-                        // إرسال إشعار بالتحديث
                         \Filament\Notifications\Notification::make()
                             ->title($state ? 'Permission Activated' : 'Permission Deactivated')
                             ->body("Permission '{$record->name}' has been " . ($state ? 'activated' : 'deactivated'))
@@ -127,11 +135,15 @@ class ListPermissions extends ListRecords
                     ->label('Deleted At')
                     ->dateTime('M j, Y g:i A')
                     ->sortable()
-                    ->visible(fn () => $this->activeTab === 'deleted'),
+                    ->visible(function () {
+                        return $this->activeTab === 'deleted';
+                    }),
                 Tables\Columns\TextColumn::make('deletedBy.name')
                     ->label('Deleted By')
                     ->default('System')
-                    ->visible(fn () => $this->activeTab === 'deleted'),
+                    ->visible(function () {
+                        return $this->activeTab === 'deleted';
+                    }),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
@@ -142,33 +154,54 @@ class ListPermissions extends ListRecords
             ])
             ->actions([
                 Tables\Actions\ViewAction::make()
-                    ->visible(fn ($record) => Gate::allows('view_permissions') && $this->activeTab !== 'deleted' && $record->is_active),
+                    ->visible(function ($record) {
+                        return Gate::allows('view_permissions') && $this->activeTab !== 'deleted' && $record->is_active;
+                    }),
                 Tables\Actions\EditAction::make()
-                    ->visible(fn ($record) => Gate::allows('update_permissions') && $this->activeTab !== 'deleted' && $record->is_active),
+                    ->visible(function ($record) {
+                        return Gate::allows('update_permissions') && $this->activeTab !== 'deleted' && $record->is_active;
+                    }),
                 Tables\Actions\DeleteAction::make()
-                    ->visible(fn () => Gate::allows('delete_permissions') && $this->activeTab !== 'deleted'),
+                    ->visible(function () {
+                        return Gate::allows('delete_permissions') && $this->activeTab !== 'deleted';
+                    }),
                 Tables\Actions\RestoreAction::make()
-                    ->visible(fn () => Gate::allows('restore_permissions') && $this->activeTab === 'deleted'),
+                    ->visible(function () {
+                        return Gate::allows('restore_permissions') && $this->activeTab === 'deleted';
+                    }),
                 Tables\Actions\ForceDeleteAction::make()
-                    ->visible(fn () => Gate::allows('force_delete_permissions') && $this->activeTab === 'deleted'),
+                    ->visible(function () {
+                        return Gate::allows('force_delete_permissions') && $this->activeTab === 'deleted';
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                        ->visible(fn () => Gate::allows('bulk_delete_permissions') && $this->activeTab !== 'deleted'),
+                        ->visible(function () {
+                            return Gate::allows('bulk_delete_permissions') && $this->activeTab !== 'deleted';
+                        }),
                     Tables\Actions\RestoreBulkAction::make()
-                        ->visible(fn () => Gate::allows('bulk_restore_permissions') && $this->activeTab === 'deleted'),
+                        ->visible(function () {
+                            return Gate::allows('bulk_restore_permissions') && $this->activeTab === 'deleted';
+                        }),
                     Tables\Actions\ForceDeleteBulkAction::make()
-                        ->visible(fn () => Gate::allows('bulk_delete_permissions') && $this->activeTab === 'deleted'),
+                        ->visible(function () {
+                            return Gate::allows('bulk_delete_permissions') && $this->activeTab === 'deleted';
+                        }),
                 ]),
             ]);
     }
 
     public function getEloquentQuery(): Builder
     {
-        return Permission::query()
-            ->with(['roles', 'users']) // تحميل العلاقات مسبقاً
-            ->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class)
+        $query = Permission::query()
+            ->with(['roles', 'users']) 
             ->withoutGlobalScope(\App\Models\ActiveScope::class);
+            
+        if (Gate::allows('view_deleted_permissions')) {
+            $query->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
+        }
+        
+        return $query;
     }
 }

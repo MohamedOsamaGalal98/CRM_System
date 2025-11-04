@@ -35,7 +35,6 @@ class ListUsers extends ListRecords
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('success')
                 ->action(function () {
-                    // Get all users with applied filters
                     return Excel::download(
                         new UserExport(), 
                         'users-' . now()->format('Y-m-d-H-i-s') . '.xlsx'
@@ -78,14 +77,11 @@ class ListUsers extends ListRecords
                 ])
                 ->action(function (array $data) {
                     try {
-                        // Handle the uploaded file using Laravel's UploadedFile
                         $uploadedFile = request()->file('mountedActionData.0.file');
                         
                         if (!$uploadedFile) {
-                            // Alternative method for Filament
                             $fileName = $data['file'];
                             
-                            // Try different storage paths
                             $possiblePaths = [
                                 storage_path('app/livewire-tmp/' . $fileName),
                                 storage_path('app/' . $fileName),
@@ -179,7 +175,6 @@ class ListUsers extends ListRecords
 
     public function getTabs(): array
     {
-        // تحقق من صلاحية رؤية السجلات المحذوفة
         $tabs = [
             'active' => Tab::make('Active Users')
                 ->icon('heroicon-o-check-circle')
@@ -230,9 +225,8 @@ class ListUsers extends ListRecords
                     ->offColor('danger')
                     ->onIcon('heroicon-s-check-circle')
                     ->offIcon('heroicon-s-x-circle')
-                    ->disabled(fn ($record) => $record->trashed()) // منع تفعيل السجلات المحذوفة
+                    ->disabled(fn ($record) => $record->trashed()) 
                     ->afterStateUpdated(function ($record, $state) {
-                        // التحقق من أن السجل غير محذوف
                         if ($record->trashed()) {
                             \Filament\Notifications\Notification::make()
                                 ->title('Cannot Activate Deleted User')
@@ -242,7 +236,6 @@ class ListUsers extends ListRecords
                             return false;
                         }
                         
-                        // إرسال إشعار بالتحديث
                         \Filament\Notifications\Notification::make()
                             ->title($state ? 'User Activated' : 'User Deactivated')
                             ->body("User '{$record->name}' has been " . ($state ? 'activated' : 'deactivated'))
@@ -423,7 +416,6 @@ class ListUsers extends ListRecords
                 Tables\Actions\RestoreAction::make()
                     ->visible(fn () => Gate::allows('restore_users') && $this->activeTab === 'deleted')
                     ->after(function ($record) {
-                        // إظهار تنبيه بأن السجل تم استعادته لكن لا يزال غير نشط
                         \Filament\Notifications\Notification::make()
                             ->title('User Restored')
                             ->body("User '{$record->name}' has been restored but remains inactive. Click the toggle to activate if needed.")
@@ -531,9 +523,14 @@ class ListUsers extends ListRecords
 
     public function getEloquentQuery(): Builder
     {
-        return User::query()
+        $query = User::query()
             ->with(['roles', 'permissions']) // تحميل العلاقات مسبقاً
-            ->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class)
             ->withoutGlobalScope(\App\Models\ActiveScope::class);
+            
+        if (Gate::allows('view_deleted_users')) {
+            $query->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
+        }
+        
+        return $query;
     }
 }

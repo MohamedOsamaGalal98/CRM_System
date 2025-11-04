@@ -16,9 +16,10 @@ class AdminUserSeeder extends Seeder
     public function run(): void
     {
         // Create admin user
-        $admin = User::create([
-            'name' => 'Admin User',
+        $admin = User::updateOrCreate([
             'email' => 'admin@admin.com',
+        ], [
+            'name' => 'Admin User',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
         ]);
@@ -27,10 +28,10 @@ class AdminUserSeeder extends Seeder
         $adminRole = Role::findByName('Admin');
         $admin->assignRole($adminRole);
 
-        // Optionally, you can also create and assign Super Admin role
-        $superAdmin = User::create([
-            'name' => 'Super Admin',
+        $superAdmin = User::updateOrCreate([
             'email' => 'superadmin@admin.com',
+        ], [
+            'name' => 'Super Admin',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
         ]);

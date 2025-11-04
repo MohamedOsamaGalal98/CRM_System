@@ -61,7 +61,7 @@ class PermissionResource extends Resource
 
     public static function canForceDeleteAny(): bool
     {
-        return Gate::allows('bulk_delete_permissions');
+        return Gate::allows('force_delete_permissions');
     }
 
     public static function canRestore($record): bool
@@ -138,7 +138,7 @@ class PermissionResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\TrashedFilter::make(),
+                ...Gate::allows('view_deleted_permissions') ? [Tables\Filters\TrashedFilter::make()] : [],
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active Status')
                     ->placeholder('All permissions')
@@ -163,9 +163,14 @@ class PermissionResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScope(SoftDeletingScope::class)
+        $query = parent::getEloquentQuery()
             ->withoutGlobalScope(\App\Models\ActiveScope::class);
+            
+        if (Gate::allows('view_deleted_permissions')) {
+            $query->withoutGlobalScope(SoftDeletingScope::class);
+        }
+        
+        return $query;
     }
 
     public static function getRelations(): array

@@ -62,7 +62,7 @@ class RoleResource extends Resource
 
     public static function canForceDeleteAny(): bool
     {
-        return Gate::allows('bulk_delete_roles');
+        return Gate::allows('force_delete_roles');
     }
 
     public static function canRestore($record): bool
@@ -151,7 +151,7 @@ class RoleResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\TrashedFilter::make(),
+                ...Gate::allows('view_deleted_roles') ? [Tables\Filters\TrashedFilter::make()] : [],
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active Status')
                     ->placeholder('All roles')
@@ -176,9 +176,14 @@ class RoleResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScope(SoftDeletingScope::class)
+        $query = parent::getEloquentQuery()
             ->withoutGlobalScope(\App\Models\ActiveScope::class);
+            
+        if (Gate::allows('view_deleted_roles')) {
+            $query->withoutGlobalScope(SoftDeletingScope::class);
+        }
+        
+        return $query;
     }
 
     public static function getRelations(): array
