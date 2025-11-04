@@ -20,6 +20,8 @@ use Filament\Notifications\Notification;
 class StatusResource extends Resource
 {
     protected static ?string $model = Status::class;
+    protected static ?string $title = "Status";
+    protected static ?string $navigationLabel = 'Status';
 
     protected static ?string $navigationIcon = 'heroicon-o-flag';
 
@@ -101,7 +103,7 @@ class StatusResource extends Resource
                 Forms\Components\Toggle::make('is_active')
                     ->label('Active')
                     ->default(true)
-                    ->helperText('Inactive statuses will be hidden from selection'),
+                    ->helperText('Inactive status will be hidden from selection'),
             ]);
     }
 

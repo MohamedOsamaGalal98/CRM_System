@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Gate;
 class ListStatuses extends ListRecords
 {
     protected static string $resource = StatusResource::class;
+    protected static ?string $title = 'Status';
 
     public ?string $activeTab = 'active';
 
@@ -38,14 +39,14 @@ class ListStatuses extends ListRecords
     public function getTabs(): array
     {
         $tabs = [
-            'active' => Tab::make('Active Statuses')
+            'active' => Tab::make('Active Status')
                 ->icon('heroicon-o-check-circle')
                 ->badge(Status::whereNull('deleted_at')->count())
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('deleted_at')),
         ];
 
         if (Gate::allows('view_deleted_statuses')) {
-            $tabs['deleted'] = Tab::make('Deleted Statuses')
+            $tabs['deleted'] = Tab::make('Deleted Status')
                 ->icon('heroicon-o-trash')
                 ->badge(Status::onlyTrashed()->count())
                 ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed());
