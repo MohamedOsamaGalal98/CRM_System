@@ -7,6 +7,7 @@ use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\DB;
+use App\Models\User;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
@@ -100,6 +101,30 @@ class RolesAndPermissionsSeeder extends Seeder
             'restore_statuses',
             'bulk_restore_statuses',
             'view_deleted_statuses',
+      
+            // Lead Source Management
+            'view_any_lead_sources',
+            'view_lead_sources',
+            'create_lead_sources',
+            'update_lead_sources',
+            'delete_lead_sources',
+            'bulk_delete_lead_sources',
+            'force_delete_lead_sources',
+            'restore_lead_sources',
+            'bulk_restore_lead_sources',
+            'view_deleted_lead_sources',
+            
+            // Custom Field Management
+            'view_any_custom_fields',
+            'view_custom_fields',
+            'create_custom_fields',
+            'update_custom_fields',
+            'delete_custom_fields',
+            'bulk_delete_custom_fields',
+            'force_delete_custom_fields',
+            'restore_custom_fields',
+            'bulk_restore_custom_fields',
+            'view_deleted_custom_fields',
         ];
 
         foreach ($permissions as $permission) {
@@ -143,10 +168,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_any_labels', 'view_labels', 'create_labels', 'update_labels', 'delete_labels',
             'bulk_delete_labels', 'force_delete_labels', 'restore_labels', 'bulk_restore_labels', 'view_deleted_labels',
             
-            // Status Management (excluding the ones you don't want)
+            // Status Management 
             'view_any_statuses', 'view_statuses', 'create_statuses', 'update_statuses', 'delete_statuses',
             'bulk_delete_statuses',
-            // 'force_delete_statuses', 'restore_statuses', 'bulk_restore_statuses', 'view_deleted_statuses', // Excluded
+            'force_delete_statuses', 'restore_statuses', 'bulk_restore_statuses', 'view_deleted_statuses', 
+
+            // Lead Source Management
+            'view_any_lead_sources', 'view_lead_sources', 'create_lead_sources', 'update_lead_sources', 'delete_lead_sources',
+            'bulk_delete_lead_sources',
+            'force_delete_lead_sources', 'restore_lead_sources', 'bulk_restore_lead_sources', 'view_deleted_lead_sources', 
         ]);
 
         // Assign permissions to Admin role (all except force delete)
@@ -211,5 +241,11 @@ class RolesAndPermissionsSeeder extends Seeder
             // Basic view permissions
             'view_any_users', 'view_users',
         ]);
+
+        // Assign Super Admin role to user named "super admin"
+        $superAdminUser = User::where('name', 'super admin')->first();
+        if ($superAdminUser) {
+            $superAdminUser->assignRole('Super Admin');
+        }
     }
 }

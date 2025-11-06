@@ -12,7 +12,6 @@ class PermissionsSeeder extends Seeder
 {
     public function run()
     {
-        // حذف جميع الصلاحيات والأدوار الموجودة
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         DB::table('model_has_permissions')->truncate();
         DB::table('model_has_roles')->truncate();
@@ -21,7 +20,6 @@ class PermissionsSeeder extends Seeder
         Role::query()->forceDelete();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         
-        // إنشاء صلاحيات شاملة للمستخدمين
         $userPermissions = [
             'view_users',
             'view_any_users', 
@@ -36,7 +34,6 @@ class PermissionsSeeder extends Seeder
             'assign_roles_users',
         ];
 
-        // إنشاء صلاحيات شاملة للأدوار
         $rolePermissions = [
             'view_roles',
             'view_any_roles',
@@ -51,7 +48,6 @@ class PermissionsSeeder extends Seeder
             'assign_permissions_roles',
         ];
 
-        // إنشاء صلاحيات شاملة للصلاحيات
         $permissionPermissions = [
             'view_permissions',
             'view_any_permissions',
@@ -64,16 +60,28 @@ class PermissionsSeeder extends Seeder
             'bulk_delete_permissions',
             'bulk_restore_permissions',
             'assign_roles_permissions',
-        ];   
+        ];
 
-        // دمج جميع الصلاحيات
+        $leadSourcePermissions = [
+            'view_lead_sources',
+            'view_any_lead_sources',
+            'create_lead_sources',
+            'update_lead_sources',
+            'delete_lead_sources',
+            'restore_lead_sources',
+            'force_delete_lead_sources',
+            'view_deleted_lead_sources',
+            'bulk_delete_lead_sources',
+            'bulk_restore_lead_sources',
+        ];
+
         $allPermissions = array_merge(
             $userPermissions,
             $rolePermissions, 
             $permissionPermissions,
+            $leadSourcePermissions,
         );
 
-        // إنشاء الصلاحيات في قاعدة البيانات
         foreach ($allPermissions as $permission) {
             Permission::firstOrCreate([
                 'name' => $permission,
@@ -83,7 +91,6 @@ class PermissionsSeeder extends Seeder
             ]);
         }
 
-        // إنشاء أدوار أساسية
         $superAdmin = Role::firstOrCreate([
             'name' => 'Super Admin',
             'guard_name' => 'web',
@@ -112,23 +119,10 @@ class PermissionsSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // إعطاء جميع الصلاحيات للـ Super Admin
         $superAdmin->givePermissionTo($allPermissions);
 
-        // إعطاء صلاحيات محدودة للـ Admin
-        $adminPermissions = array_merge(
-            $userPermissions,
-            $rolePermissions,
-            [
-                'view_dashboard',
-                'view_analytics', 
-                'export_reports',
-                'view_logs',
-            ]
-        );
-        $admin->givePermissionTo($adminPermissions);
+     
 
-        // إعطاء صلاحيات أقل للـ Manager
         $managerPermissions = [
             'view_users',
             'view_any_users',
@@ -141,13 +135,11 @@ class PermissionsSeeder extends Seeder
         ];
         $manager->givePermissionTo($managerPermissions);
 
-        // إعطاء صلاحيات أساسية للـ User
         $userBasicPermissions = [
             'view_dashboard',
         ];
         $user->givePermissionTo($userBasicPermissions);
 
-        // إعطاء دور Super Admin للمستخدم الأول
         $firstUser = User::first();
         if ($firstUser) {
             $firstUser->assignRole('Super Admin');
